@@ -1,4 +1,4 @@
-const { Telegraf } = require('telegraf');
+const { Telegraf, Scenes, session } = require('telegraf');
 const { message } = require('telegraf/filters');
 require('dotenv').config();
 
@@ -10,7 +10,24 @@ if (!botToken) {
 
 console.log('Bot config loaded');
 
+const newTaskWizard = new Scenes.WizardScene(
+  'TASK_WIZARD',
+  async ctx => {
+    await ctx.reply('Send me the task title');
+    return ctx.wizard.next();
+  },
+  async ctx => {
+    const title = ctx.message.text;
+    await ctx.reply(`Got it. Task title: ${title}`);
+    return ctx.scene.leave();
+  }
+);
+
+const stage = new Scenes.Stage([newTaskWizard]);
 const bot = new Telegraf(botToken);
+
+bot.use(session());
+bot.use(stage.middleware());
 
 bot.start(ctx =>
   ctx.reply(
@@ -23,5 +40,7 @@ bot.start(ctx =>
 bot.on(message(), ctx => {
   ctx.reply('👍' + ctx.message.text);
 });
+
+bot.command('newtask', ctx => ctx.scene.enter('TASK_WIZARD'));
 
 bot.launch();
